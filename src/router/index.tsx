@@ -10,7 +10,7 @@ import type { TAnimation } from "../components/shared/SplashScreen";
 const ANIMATION: TAnimation = {
   name: 'liquid-running-down',
   path: '/animations/splash.json',
-  speed: 0.75,
+  speed: 0.1,
   transitionInFrames: [0, 20],
   waitingScreenLoadFrame: 20,
   transitionOutFrames: [21, 50]
