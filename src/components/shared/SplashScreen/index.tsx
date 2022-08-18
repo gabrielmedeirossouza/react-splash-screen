@@ -1,102 +1,88 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import { useRecoilState } from "recoil"
-import { Player } from '@lottiefiles/react-lottie-player';
+import { Player, IPlayer } from "../../global/Player"
 import { splashScreenState, ESplashScreenState } from './store/splashScreenState'
-import styled from "styled-components";
+import { Container } from './styles'
 
-// "https://assets3.lottiefiles.com/private_files/lf30_k9zqevoo.json" - bird / explosion / feather
-// "https://assets3.lottiefiles.com/packages/lf20_UJNc2t.json"
-
-interface IContainerProps {
-  showSplashScreen: boolean
+export type TAnimation = {
+  name: string,
+  path: string;
+  speed?: number;
+  transitionInFrames: [number, number];
+  waitingScreenLoadFrame: number;
+  transitionOutFrames: [number, number];
 }
-
-const Container = styled.div<IContainerProps>`
-  position: fixed;
-  display: ${props => props.showSplashScreen ? 'flex' : 'none'};
-  justify-content: center;
-  align-items: center;
-  width: 100vw;
-  height: 100vh;
-  top: 0;
-  left: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 999;
-`
 
 interface IProps {
-  isScreenLoaded: boolean
+  isScreenLoaded: boolean;
+  animation: TAnimation;
 }
 
-export function SplashScreen({ isScreenLoaded }: IProps) {
-  const playerRef = useRef<Player>(null)
-  const animationName = useRef('')
-  const [isAnimationLoaded, setIsAnimationLoaded] = useState(false)
+export function SplashScreen({ isScreenLoaded, animation }: IProps) {
   const [splashScreen, setSplashScreen] = useRecoilState(splashScreenState)
+  const isStarted = useRef(false)
+  const playerRef = useRef<IPlayer>(null)
+  const player = playerRef.current
 
-  const play = (name: string) => {
-    animationName.current = name
-    playerRef.current?.state?.instance?.goToAndPlay(animationName.current, true)
+  useEffect(() => {
+    actionsManager()
+
+    player?.addEventListener('complete', onComplete)
+
+    return () => player?.removeEventListener('complete', onComplete)
+  }, [player, isScreenLoaded, splashScreen])
+
+  useEffect(initialState, [player?.isLoaded])
+
+  function initialState() {
+    if (!player?.isLoaded) return
+
+    player.setSpeed(animation.speed || 1)
   }
 
-  const onFrameChange = () => {
-    if (!playerRef.current) return
+  function actionsManager() {
+    if (splashScreen === ESplashScreenState.TRANSITION_IN && !isStarted.current) {
+      isStarted.current = true
+      player?.playSegments(animation.transitionInFrames, true)
+    }
 
-    const player = playerRef.current.state.instance
-    const frame = Math.round(player?.currentFrame ?? 0)
+    if (splashScreen === ESplashScreenState.WAITING_SCREEN_LOAD) {
+      player?.playSegments([animation.waitingScreenLoadFrame, animation.waitingScreenLoadFrame], true)
+    }
 
+    if (splashScreen === ESplashScreenState.TRANSITION_OUT) {
+      player?.playSegments(animation.transitionOutFrames, true)
+    }
 
-    if (frame === 21 && splashScreen !== ESplashScreenState.WAITING_SCREEN_LOAD) {
+    if (splashScreen === ESplashScreenState.FINISHED) {
+      isStarted.current = false
+      player?.goToAndStop(0, true)
+    }
+  }
+
+  function onComplete() {
+    if (splashScreen === ESplashScreenState.TRANSITION_IN) {
       setSplashScreen(ESplashScreenState.WAITING_SCREEN_LOAD)
     }
 
-    if (animationName.current === 'explosion' && frame === 10) {
-      player?.stop()
+    if (splashScreen === ESplashScreenState.WAITING_SCREEN_LOAD && isScreenLoaded) {
+      setSplashScreen(ESplashScreenState.TRANSITION_OUT)
+    }
+
+    if (splashScreen === ESplashScreenState.TRANSITION_OUT) {
       setSplashScreen(ESplashScreenState.FINISHED)
     }
+
   }
 
-  useEffect(() => {
-    const canTransitionOutAnimation =
-      playerRef.current &&
-      isScreenLoaded &&
-      splashScreen === ESplashScreenState.WAITING_SCREEN_LOAD
-
-    if (!canTransitionOutAnimation) return
-
-    const player = playerRef.current.state.instance
-
-    player?.loop && (player.loop = false)
-    play('explosion')
-  }, [isScreenLoaded, splashScreen])
-
-  useEffect(() => {
-    const canTransitionInAnimation =
-      playerRef.current &&
-      isAnimationLoaded &&
-      splashScreen === ESplashScreenState.TRANSITION_IN
-
-    if (!canTransitionInAnimation) return
-
-    const player = playerRef.current.state.instance
-
-    player?.loop && (player.loop = true)
-    play('bird')
-  }, [splashScreen, isAnimationLoaded])
-
   return (
-    <Container showSplashScreen={splashScreen !== ESplashScreenState.FINISHED}>
+    <Container show={splashScreen !== ESplashScreenState.FINISHED}>
       <Player
         ref={playerRef}
-        src="https://assets3.lottiefiles.com/private_files/lf30_k9zqevoo.json"
-        style={{width: '100%', height: '100%'}}
-        onEvent={(event: string) => {
-          if (event === 'load') {
-            setIsAnimationLoaded(true)
-          }
-
-          if (event === 'frame') {
-            onFrameChange()
+        path={animation.path}
+        config={{
+          rendererSettings: {
+            preserveAspectRatio: 'xMidYMid slice'
           }
         }}
       />

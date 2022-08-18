@@ -5,14 +5,16 @@ interface IWithSplashScreenParentProps {
 }
 
 interface IWithSplashScreenChildrenProps {
-  manualLoad: () => () => void;
+  useManualLoad: () => () => void;
 }
+
+// TODO: Olhar uma melhor forma de usar o load automatico e o manual (sem o timeout e sem o hook useManualLoad)
 
 export function withSplashScreen(Component: React.ComponentType<IWithSplashScreenChildrenProps>) {
   return (hocProps: IWithSplashScreenParentProps) => {
     const isManualLoad = useRef(false)
 
-    const manualLoad = () => {
+    const useManualLoad = () => {
       isManualLoad.current = true
 
       const load = () => {
@@ -29,13 +31,13 @@ export function withSplashScreen(Component: React.ComponentType<IWithSplashScree
 
         isManualLoad.current = true
         hocProps.onLoad();
-      }, 10)
+      }, 15)
     }, [])
 
     return (
       <Component
         {...hocProps}
-        manualLoad={manualLoad}
+        useManualLoad={useManualLoad}
       />
     )
   }

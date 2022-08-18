@@ -1,21 +1,22 @@
 import { useEffect } from "react"
-import { useNavigate } from "../../components/shared/SplashScreen/hooks/useNavigate"
 import { withSplashScreen } from "../../components/shared/SplashScreen/HOC/withSplashScreen"
+import { useNavigate } from "../../components/shared/SplashScreen/hooks/useNavigate"
+import { delay } from "../../utils/tests/delay"
 
-export const Home = withSplashScreen(({ manualLoad }) => {
+export const Home = withSplashScreen(({ useManualLoad }) => {
+  const load = useManualLoad()
   const navigate = useNavigate()
-  const load = manualLoad()
 
   useEffect(() => {
-    setTimeout(() => {
+    delay(1000).then(() => {
       load()
-    }, 2500)
-  }, [])
+    })
+  } , [])
 
   return (
     <div>
       <h1>Home</h1>
-      <button onClick={() => navigate("/about")}>Ir para Sobre</button>
+      <button onClick={() => navigate("/about")}>Ir para About</button>
     </div>
   )
 })
